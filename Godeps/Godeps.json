@@ -1,0 +1,27 @@
+{
+	"ImportPath": "github.com/divideandconquer/go-consul-client",
+	"GoVersion": "go1.5.1",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/divideandconquer/go-merge/merge",
+			"Rev": "dc9048d04b65a57f75d8a3875a0fb85ca1f70624"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/consul/api",
+			"Comment": "v0.6.0-rc2-37-g71bffe8",
+			"Rev": "71bffe81d1a28e0ad3bbcf605220a2bc1e9af24f"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/go-cleanhttp",
+			"Rev": "5df5ddc69534f1a4697289f1dca2193fbb40213f"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/serf/coordinate",
+			"Comment": "v0.6.4-150-ge9ac4bb",
+			"Rev": "e9ac4bb0c5721826d5cd3d1cd582c12fbc664bb8"
+		}
+	]
+}
