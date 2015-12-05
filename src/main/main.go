@@ -11,6 +11,7 @@ import (
 
 var filepath = flag.String("file", "", "the path to the json file")
 var namespace = flag.String("namespace", "", "the consul namespace to use as a prefix")
+var consulAddr = flag.String("consul", "", "the consul address to use as a prefix")
 
 func main() {
 	flag.Parse()
@@ -19,21 +20,29 @@ func main() {
 		printHelp()
 	}
 
+	if consulAddr == nil || *consulAddr == "" {
+		log.Printf("Missing parameter -consul")
+		printHelp()
+	}
+
 	if _, err := os.Stat(*filepath); os.IsNotExist(err) {
-		log.Fatalf("Given file does not exist: %s", filepath)
+		log.Fatalf("Given file does not exist: %s", *filepath)
 	}
 	data, err := ioutil.ReadFile(*filepath)
 	if err != nil {
-		log.Fatalf("Error reading file %s : %v", filepath, err)
+		log.Fatalf("Error reading file %s : %v", *filepath, err)
 	}
 
-	loader := client.NewCachedLoader(*namespace)
+	loader, err := client.NewCachedLoader(*namespace, *consulAddr)
+	if err != nil {
+		log.Fatalf("Error creating loader: %v", err)
+	}
 
 	err = loader.Import(data)
 	if err != nil {
 		log.Fatalf("Error importing data: %v", err)
 	}
-	log.Printf("Json from %s successfully loaded", filepath)
+	log.Printf("Json from %s successfully loaded", *filepath)
 }
 
 func printHelp() {
@@ -42,5 +51,6 @@ func printHelp() {
 	log.Println("bin/importer -file /path/to/json/file -namespace dev/config")
 	log.Println(" -file is the path to a json file to import")
 	log.Println(" -namespace is a prefix to use in consul")
+	log.Println(" -consul is the address for consul. e.g. 172.17.8.101:8500")
 	os.Exit(1)
 }

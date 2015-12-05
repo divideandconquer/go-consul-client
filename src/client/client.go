@@ -33,12 +33,20 @@ type cachedLoader struct {
 	namespace string
 	cacheLock sync.RWMutex
 	cache     map[string][]byte
+	consulKV  *api.KV
 }
 
 // NewCachedLoader creates a Loader that will cache the provided namespace on initialization
 // and return data from that cache on Get
-func NewCachedLoader(namespace string) Loader {
-	return &cachedLoader{namespace: namespace}
+func NewCachedLoader(namespace string, consulAddr string) (Loader, error) {
+	config := api.DefaultConfig()
+	config.Address = consulAddr
+	consul, err := api.NewClient(config)
+	if err != nil {
+		return nil, fmt.Errorf("Could not connect to consul: %v", err)
+	}
+
+	return &cachedLoader{namespace: namespace, consulKV: consul.KV()}, nil
 }
 
 // Import takes a json byte array and inserts the key value pairs into consul prefixed by the namespace
@@ -53,13 +61,12 @@ func (c *cachedLoader) Import(data []byte) error {
 		return fmt.Errorf("Unable to complie KVs: %v", err)
 	}
 
-	consul, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		return fmt.Errorf("Could not create consul client: %v", err)
 	}
 	for k, v := range kvMap {
 		p := &api.KVPair{Key: k, Value: v}
-		_, err = consul.KV().Put(p, nil)
+		_, err = c.consulKV.Put(p, nil)
 		if err != nil {
 			return fmt.Errorf("Could not write key to consul (%s | %s) %v", k, v, err)
 		}
@@ -82,11 +89,11 @@ func (c *cachedLoader) compileKeyValues(data map[string]interface{}, prefix stri
 			}
 		} else {
 			//for other types json marshal will turn then into string byte slice for storage
-			j, err := json.Marshal(data)
+			j, err := json.Marshal(v)
 			if err != nil {
 				return nil, err
 			}
-			result[k] = j
+			result[prefix+divider+k] = j
 		}
 	}
 	return result, nil
@@ -94,12 +101,7 @@ func (c *cachedLoader) compileKeyValues(data map[string]interface{}, prefix stri
 
 // Initialize loads the consul KV's from the namespace into cache for later retrieval
 func (c *cachedLoader) Initialize() error {
-	consul, err := api.NewClient(api.DefaultConfig())
-	if err != nil {
-		return fmt.Errorf("Could not create consul client: %v", err)
-	}
-
-	pairs, _, err := consul.KV().List(c.namespace, nil)
+	pairs, _, err := c.consulKV.List(c.namespace, nil)
 	if err != nil {
 		return fmt.Errorf("Could not pull config from consul: %v", err)
 	}
