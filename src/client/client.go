@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/divideandconquer/go-merge/merge"
@@ -30,6 +31,7 @@ type Loader interface {
 
 type cachedLoader struct {
 	namespace string
+	cacheLock sync.RWMutex
 	cache     map[string][]byte
 }
 
@@ -86,7 +88,6 @@ func (c *cachedLoader) compileKeyValues(data map[string]interface{}, prefix stri
 
 // Initialize loads the consul KV's from the namespace into cache for later retrieval
 func (c *cachedLoader) Initialize() error {
-	c.cache = make(map[string][]byte)
 	consul, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		return fmt.Errorf("Could not create consul client: %v", err)
@@ -96,6 +97,12 @@ func (c *cachedLoader) Initialize() error {
 	if err != nil {
 		return fmt.Errorf("Could not pull config from consul: %v", err)
 	}
+
+	//write lock the cache incase init is called more than once
+	c.cacheLock.Lock()
+	defer c.cacheLock.Unlock()
+
+	c.cache = make(map[string][]byte)
 	for _, kv := range pairs {
 		c.cache[kv.Key] = kv.Value
 	}
@@ -104,6 +111,9 @@ func (c *cachedLoader) Initialize() error {
 
 // Get fetches the raw config from cache
 func (c *cachedLoader) Get(key string) ([]byte, error) {
+	c.cacheLock.RLock()
+	defer c.cacheLock.RUnlock()
+
 	if ret, ok := c.cache[key]; ok {
 		return ret, nil
 	}
