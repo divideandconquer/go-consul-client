@@ -13,7 +13,9 @@ var filepath = flag.String("file", "", "the path to the json file")
 var namespace = flag.String("namespace", "", "the consul namespace to use as a prefix")
 
 func main() {
+	flag.Parse()
 	if filepath == nil || *filepath == "" {
+		log.Printf("Missing parameter -file")
 		printHelp()
 	}
 
