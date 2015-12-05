@@ -38,17 +38,20 @@ type cachedLoader struct {
 // NewCachedLoader creates a Loader that will cache the provided namespace on initialization
 // and return data from that cache on Get
 func NewCachedLoader(namespace string) Loader {
-	return &cachedLoader{namespace}
+	return &cachedLoader{namespace: namespace}
 }
 
 // Import takes a json byte array and inserts the key value pairs into consul prefixed by the namespace
 func (c *cachedLoader) Import(data []byte) error {
-	conf := make(map[string][]interface{})
+	conf := make(map[string]interface{})
 	err := json.Unmarshal(data, &conf)
 	if err != nil {
 		return fmt.Errorf("Unable to parse json data: %v", err)
 	}
-	kvMap := c.compileKeyValues(conf, c.namespace)
+	kvMap, err := c.compileKeyValues(conf, c.namespace)
+	if err != nil {
+		return fmt.Errorf("Unable to complie KVs: %v", err)
+	}
 
 	consul, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
@@ -73,14 +76,17 @@ func (c *cachedLoader) compileKeyValues(data map[string]interface{}, prefix stri
 			if err != nil {
 				return nil, err
 			}
-			result = merge.Merge(result, compiled)
+			merged := merge.Merge(result, compiled)
+			if mm, ok := merged.(map[string][]byte); ok {
+				result = mm
+			}
 		} else {
 			//for other types json marshal will turn then into string byte slice for storage
-			jsonArr, err := json.Marshal(arr)
+			j, err := json.Marshal(data)
 			if err != nil {
 				return nil, err
 			}
-			result[k] = jsonArr
+			result[k] = j
 		}
 	}
 	return result, nil
