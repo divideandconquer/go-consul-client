@@ -122,10 +122,11 @@ func (c *cachedLoader) Get(key string) ([]byte, error) {
 	c.cacheLock.RLock()
 	defer c.cacheLock.RUnlock()
 
-	if ret, ok := c.cache[key]; ok {
+	compiledKey := c.namespace + divider + key
+	if ret, ok := c.cache[compiledKey]; ok {
 		return ret, nil
 	}
-	return nil, fmt.Errorf("Could not find value for key: %s", key)
+	return nil, fmt.Errorf("Could not find value for key: %s", compiledKey)
 }
 
 // MustGetString fetches the config and parses it into a string.  Panics on failure.
