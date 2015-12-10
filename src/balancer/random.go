@@ -10,7 +10,7 @@ import (
 )
 
 type cachedServiceLocation struct {
-	Services []ServiceLocation
+	Services []*ServiceLocation
 	CachedAt time.Time
 }
 
@@ -18,7 +18,7 @@ type randomBalancer struct {
 	environment   string
 	consulCatalog *api.Catalog
 	cache         map[string]cachedServiceLocation
-	cacheLock     sync.RWMutex
+	cacheLock     sync.RWMutex //TODO lock per serviceName
 	ttl           time.Duration
 }
 
@@ -42,7 +42,7 @@ func NewRandomDNSBalancer(environment string, consulAddr string, cacheTTL time.D
 	return &r, nil
 }
 
-func (r *randomBalancer) FindService(serviceName string) (ServiceLocation, error) {
+func (r *randomBalancer) FindService(serviceName string) (*ServiceLocation, error) {
 	services, err := r.getServiceFromCache(serviceName)
 	if err != nil || len(services) == 0 {
 		services, err = r.writeServiceToCache(serviceName)
@@ -53,16 +53,16 @@ func (r *randomBalancer) FindService(serviceName string) (ServiceLocation, error
 	return r.pickService(services), nil
 }
 
-func (r *randomBalancer) pickService(services []ServiceLocation) ServiceLocation {
+func (r *randomBalancer) pickService(services []*ServiceLocation) *ServiceLocation {
 	return services[rand.Intn(len(services))]
 }
 
-func (r *randomBalancer) getServiceFromCache(serviceName string) ([]ServiceLocation, error) {
+func (r *randomBalancer) getServiceFromCache(serviceName string) ([]*ServiceLocation, error) {
 	r.cacheLock.RLock()
 	defer r.cacheLock.RUnlock()
 
 	if result, ok := r.cache[serviceName]; ok {
-		if time.Now().UTC().Before(result.cachedAt.Add(r.ttl)) {
+		if time.Now().UTC().Before(result.CachedAt.Add(r.ttl)) {
 			return result.Services, nil
 		}
 		return nil, fmt.Errorf("Cache for %s is expired", serviceName)
@@ -72,7 +72,7 @@ func (r *randomBalancer) getServiceFromCache(serviceName string) ([]ServiceLocat
 
 // writeServiceToCache locks specifically to alleviate load on consul some additional lock time
 // is preferable to extra consul calls
-func (r *randomBalancer) writeServiceToCache(serviceName string) ([]ServiceLocation, error) {
+func (r *randomBalancer) writeServiceToCache(serviceName string) ([]*ServiceLocation, error) {
 	//acquire a write lock
 	r.cacheLock.Lock()
 	defer r.cacheLock.Unlock()
@@ -80,8 +80,8 @@ func (r *randomBalancer) writeServiceToCache(serviceName string) ([]ServiceLocat
 	//check the cache again in case we've fetched since the last check
 	//(our lock could have been waiting for another call to this function)
 	if result, ok := r.cache[serviceName]; ok {
-		if time.Now().UTC().Before(result.cachedAt.Add(r.ttl)) {
-			return r.pickService(result.Services), nil
+		if time.Now().UTC().Before(result.CachedAt.Add(r.ttl)) {
+			return result.Services, nil
 		}
 	}
 
@@ -96,9 +96,9 @@ func (r *randomBalancer) writeServiceToCache(serviceName string) ([]ServiceLocat
 	}
 
 	//setup service locations
-	var services []ServiceLocation
+	var services []*ServiceLocation
 	for _, v := range consulServices {
-		s := ServiceLocation{}
+		s := &ServiceLocation{}
 		s.URL = v.Address
 		s.Port = v.ServicePort
 		services = append(services, s)
