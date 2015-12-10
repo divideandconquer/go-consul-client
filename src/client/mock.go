@@ -48,9 +48,9 @@ func (m *mockLoader) MustGetBool(key string) bool {
 	return false
 }
 
-func (m *mockLoader) MustGetInt(key string, base int, bitsize int) int64 {
+func (m *mockLoader) MustGetInt(key string) int {
 	if ret, ok := m.data[key]; ok {
-		if result, ok := ret.(int64); ok {
+		if result, ok := ret.(int); ok {
 			return result
 		}
 	}

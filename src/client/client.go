@@ -3,7 +3,6 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -23,7 +22,7 @@ type Loader interface {
 	// They are maingly meant for use with configs that are required for an app to start up
 	MustGetString(key string) string
 	MustGetBool(key string) bool
-	MustGetInt(key string, base int, bitsize int) int64
+	MustGetInt(key string) int
 	MustGetDuration(key string) time.Duration
 
 	//TODO add array support?
@@ -135,7 +134,14 @@ func (c *cachedLoader) MustGetString(key string) string {
 	if err != nil {
 		panic(fmt.Sprintf("Could not fetch config (%s) %v", key, err))
 	}
-	return string(b)
+
+	var s string
+	err = json.Unmarshal(b, &s)
+	if err != nil {
+		panic(fmt.Sprintf("Could not unmarshal config (%s) %v", key, err))
+	}
+
+	return s
 }
 
 // MustGetBool fetches the config and parses it into a bool.  Panics on failure.
@@ -144,34 +150,33 @@ func (c *cachedLoader) MustGetBool(key string) bool {
 	if err != nil {
 		panic(fmt.Sprintf("Could not fetch config (%s) %v", key, err))
 	}
-	ret, err := strconv.ParseBool(string(b))
+	var ret bool
+	err = json.Unmarshal(b, &ret)
 	if err != nil {
-		panic(fmt.Sprintf("Could not parse config (%s) into a bool: %v", key, err))
+		panic(fmt.Sprintf("Could not unmarshal config (%s) %v", key, err))
 	}
 	return ret
 }
 
 // MustGetInt fetches the config and parses it into an int.  Panics on failure.
-// base and bitsize work the same way as strconv.ParseInt()
-func (c *cachedLoader) MustGetInt(key string, base int, bitsize int) int64 {
+func (c *cachedLoader) MustGetInt(key string) int {
 	b, err := c.Get(key)
 	if err != nil {
 		panic(fmt.Sprintf("Could not fetch config (%s) %v", key, err))
 	}
-	ret, err := strconv.ParseInt(string(b), base, bitsize)
+
+	var ret int
+	err = json.Unmarshal(b, &ret)
 	if err != nil {
-		panic(fmt.Sprintf("Could not parse config (%s) into an int: %v", key, err))
+		panic(fmt.Sprintf("Could not unmarshal config (%s) %v", key, err))
 	}
 	return ret
 }
 
 // MustGetDuration fetches the config and parses it into a duration.  Panics on failure.
 func (c *cachedLoader) MustGetDuration(key string) time.Duration {
-	b, err := c.Get(key)
-	if err != nil {
-		panic(fmt.Sprintf("Could not fetch config (%s) %v", key, err))
-	}
-	ret, err := time.ParseDuration(string(b))
+	s := c.MustGetString(key)
+	ret, err := time.ParseDuration(s)
 	if err != nil {
 		panic(fmt.Sprintf("Could not parse config (%s) into a duration: %v", key, err))
 	}

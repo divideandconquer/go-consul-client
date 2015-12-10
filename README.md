@@ -45,8 +45,7 @@ func main() {
 	//fetch data from the cache
 	myConfigString := conf.MustGetString("config_key")
 	myConfigBool := conf.MustGetBool("config_key")
-	myConfigInt64 := conf.MustGetInt("config_key", 10, 64)
-	myConfigInt32 := int32(conf.MustGetInt("config_key", 10, 32))
+	myConfigInt := conf.MustGetInt("config_key")
 	myConfigDuration := conf.MustGetDuration("config_key")
 
 	...
