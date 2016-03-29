@@ -78,7 +78,8 @@ func (c *cachedLoader) compileKeyValues(data map[string]interface{}, prefix stri
 	for k, v := range data {
 		if subMap, ok := v.(map[string]interface{}); ok {
 			//recurse and merge results
-			compiled, err := c.compileKeyValues(subMap, prefix+divider+k)
+
+			compiled, err := c.compileKeyValues(subMap, c.qualify(prefix, k))
 			if err != nil {
 				return nil, err
 			}
@@ -92,10 +93,18 @@ func (c *cachedLoader) compileKeyValues(data map[string]interface{}, prefix stri
 			if err != nil {
 				return nil, err
 			}
-			result[prefix+divider+k] = j
+
+			result[c.qualify(prefix, k)] = j
 		}
 	}
 	return result, nil
+}
+
+func (c *cachedLoader) qualify(prefix, key string) string {
+	if len(prefix) > 0 {
+		return prefix + divider + key
+	}
+	return key
 }
 
 // Initialize loads the consul KV's from the namespace into cache for later retrieval
