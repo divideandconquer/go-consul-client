@@ -16,7 +16,7 @@ type cachedServiceLocation struct {
 
 type randomBalancer struct {
 	environment   string
-	consulCatalog *api.Catalog
+	consulCatalog *api.Health
 	cache         map[string]cachedServiceLocation
 	cacheLock     sync.RWMutex //TODO lock per serviceName
 	ttl           time.Duration
@@ -38,7 +38,7 @@ func NewRandomDNSBalancer(environment string, consulAddr string, cacheTTL time.D
 	r.cache = make(map[string]cachedServiceLocation)
 	r.environment = environment
 	r.ttl = cacheTTL
-	r.consulCatalog = consul.Catalog()
+	r.consulCatalog = consul.Health()
 	return &r, nil
 }
 
@@ -86,7 +86,7 @@ func (r *randomBalancer) writeServiceToCache(serviceName string) ([]*ServiceLoca
 	}
 
 	//it still isn't in the cache, lets put it there
-	consulServices, _, err := r.consulCatalog.Service(serviceName, r.environment, nil)
+	consulServices, _, err := r.consulCatalog.Service(serviceName, r.environment, true, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Error reaching consul for service lookup %v", err)
 	}
@@ -99,8 +99,8 @@ func (r *randomBalancer) writeServiceToCache(serviceName string) ([]*ServiceLoca
 	var services []*ServiceLocation
 	for _, v := range consulServices {
 		s := &ServiceLocation{}
-		s.URL = v.Address
-		s.Port = v.ServicePort
+		s.URL = v.Service.Address
+		s.Port = v.Service.Port
 		services = append(services, s)
 	}
 
