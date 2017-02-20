@@ -3,12 +3,11 @@ package balancer
 import (
 	"fmt"
 	"math/rand"
+	"net"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
-
-	"net"
-	"strconv"
 
 	"github.com/hashicorp/consul/api"
 )
