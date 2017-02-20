@@ -3,8 +3,12 @@ package balancer
 import (
 	"fmt"
 	"math/rand"
+	"net/url"
 	"sync"
 	"time"
+
+	"net"
+	"strconv"
 
 	"github.com/hashicorp/consul/api"
 )
@@ -51,6 +55,24 @@ func (r *randomBalancer) FindService(serviceName string) (*ServiceLocation, erro
 		}
 	}
 	return r.pickService(services), nil
+}
+
+func (r *randomBalancer) GetHttpUrl(serviceName string, useTLS bool) (url.URL, error) {
+	result := url.URL{}
+	loc, err := r.FindService(serviceName)
+	if err != nil {
+		return result, err
+	}
+	result.Host = loc.URL
+	if loc.Port != 0 {
+		result.Host = net.JoinHostPort(loc.URL, strconv.Itoa(loc.Port))
+	}
+	if useTLS {
+		result.Scheme = "https"
+	} else {
+		result.Scheme = "http"
+	}
+	return result, nil
 }
 
 func (r *randomBalancer) pickService(services []*ServiceLocation) *ServiceLocation {
