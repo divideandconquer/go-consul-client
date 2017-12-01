@@ -6,27 +6,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/divideandconquer/go-consul-client/src/config"
 	"github.com/divideandconquer/go-merge/merge"
 	"github.com/hashicorp/consul/api"
 )
 
 const divider = "/"
-
-// Loader is a object that can import, initialize, and Get config values
-type Loader interface {
-	Import(data []byte) error
-	Initialize() error
-	Get(key string) ([]byte, error)
-
-	// Must functions will panic if they can't do what is requested.
-	// They are maingly meant for use with configs that are required for an app to start up
-	MustGetString(key string) string
-	MustGetBool(key string) bool
-	MustGetInt(key string) int
-	MustGetDuration(key string) time.Duration
-
-	//TODO add array support?
-}
 
 type cachedLoader struct {
 	namespace string
@@ -37,7 +22,7 @@ type cachedLoader struct {
 
 // NewCachedLoader creates a Loader that will cache the provided namespace on initialization
 // and return data from that cache on Get
-func NewCachedLoader(namespace string, consulAddr string) (Loader, error) {
+func NewCachedLoader(namespace string, consulAddr string) (config.Loader, error) {
 	config := api.DefaultConfig()
 	config.Address = consulAddr
 	consul, err := api.NewClient(config)
