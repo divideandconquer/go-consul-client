@@ -9,11 +9,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/divideandconquer/go-consul-client/src/balancer"
 	"github.com/hashicorp/consul/api"
 )
 
 type cachedServiceLocation struct {
-	Services []*ServiceLocation
+	Services []*balancer.ServiceLocation
 	CachedAt time.Time
 }
 
@@ -29,7 +30,8 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func NewRandomDNSBalancer(environment string, consulAddr string, cacheTTL time.Duration) (DNS, error) {
+// NewRandomDNSBalancer will return a random balancer.DNS that looks up dns in consul.
+func NewRandomDNSBalancer(environment string, consulAddr string, cacheTTL time.Duration) (balancer.DNS, error) {
 	config := api.DefaultConfig()
 	config.Address = consulAddr
 	consul, err := api.NewClient(config)
@@ -45,7 +47,7 @@ func NewRandomDNSBalancer(environment string, consulAddr string, cacheTTL time.D
 	return &r, nil
 }
 
-func (r *randomBalancer) FindService(serviceName string) (*ServiceLocation, error) {
+func (r *randomBalancer) FindService(serviceName string) (*balancer.ServiceLocation, error) {
 	services, err := r.getServiceFromCache(serviceName)
 	if err != nil || len(services) == 0 {
 		services, err = r.writeServiceToCache(serviceName)
@@ -74,11 +76,11 @@ func (r *randomBalancer) GetHttpUrl(serviceName string, useTLS bool) (url.URL, e
 	return result, nil
 }
 
-func (r *randomBalancer) pickService(services []*ServiceLocation) *ServiceLocation {
+func (r *randomBalancer) pickService(services []*balancer.ServiceLocation) *balancer.ServiceLocation {
 	return services[rand.Intn(len(services))]
 }
 
-func (r *randomBalancer) getServiceFromCache(serviceName string) ([]*ServiceLocation, error) {
+func (r *randomBalancer) getServiceFromCache(serviceName string) ([]*balancer.ServiceLocation, error) {
 	r.cacheLock.RLock()
 	defer r.cacheLock.RUnlock()
 
@@ -93,7 +95,7 @@ func (r *randomBalancer) getServiceFromCache(serviceName string) ([]*ServiceLoca
 
 // writeServiceToCache locks specifically to alleviate load on consul some additional lock time
 // is preferable to extra consul calls
-func (r *randomBalancer) writeServiceToCache(serviceName string) ([]*ServiceLocation, error) {
+func (r *randomBalancer) writeServiceToCache(serviceName string) ([]*balancer.ServiceLocation, error) {
 	//acquire a write lock
 	r.cacheLock.Lock()
 	defer r.cacheLock.Unlock()
@@ -117,9 +119,9 @@ func (r *randomBalancer) writeServiceToCache(serviceName string) ([]*ServiceLoca
 	}
 
 	//setup service locations
-	var services []*ServiceLocation
+	var services []*balancer.ServiceLocation
 	for _, v := range consulServices {
-		s := &ServiceLocation{}
+		s := &balancer.ServiceLocation{}
 		s.URL = v.Service.Address
 		s.Port = v.Service.Port
 		services = append(services, s)
