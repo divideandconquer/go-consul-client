@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/divideandconquer/go-consul-client/src/config"
 )
 
 type mockLoader struct {
 	data map[string]interface{}
 }
 
-func NewMockLoader(data map[string]interface{}) Loader {
+func NewMockLoader(data map[string]interface{}) config.Loader {
 	return &mockLoader{data}
 }
 func (m *mockLoader) Import(data []byte) error {
