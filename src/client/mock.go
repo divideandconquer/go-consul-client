@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -68,4 +69,8 @@ func (m *mockLoader) MustGetDuration(key string) time.Duration {
 	}
 	log.Fatalf("Key (%s) not set in mock", key)
 	return 0
+}
+
+func (m *mockLoader) Put(key string, value []byte) error {
+	return errors.New("Not implemented")
 }
