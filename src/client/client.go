@@ -176,3 +176,10 @@ func (c *cachedLoader) MustGetDuration(key string) time.Duration {
 	}
 	return ret
 }
+
+func (c *cachedLoader) Put(key string, value []byte) error {
+	c.cacheLock.Lock()
+	defer c.cacheLock.Unlock()
+	c.cache[key] = value
+	return nil
+}
