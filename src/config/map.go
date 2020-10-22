@@ -8,7 +8,7 @@ import (
 )
 
 type mappedLoader struct {
-	data     map[string][]byte
+	data     map[string]json.RawMessage
 	dataLock sync.RWMutex
 }
 
@@ -22,7 +22,7 @@ func NewMappedLoader(data []byte) (Loader, error) {
 
 // Import takes a json byte array and inserts the key value pairs into consul prefixed by the namespace
 func (m *mappedLoader) Import(data []byte) error {
-	conf := make(map[string][]byte)
+	conf := make(map[string]json.RawMessage)
 	err := json.Unmarshal(data, &conf)
 	if err != nil {
 		return fmt.Errorf("Unable to parse json data: %v", err)
