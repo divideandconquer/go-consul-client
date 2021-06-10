@@ -1,1 +1,11 @@
+# Binaries for programs and plugins
 bin
+
+# Dependency directories
+vendor
+
+# IDEs and editors
+.idea
+
+# OS
+.DS_Store

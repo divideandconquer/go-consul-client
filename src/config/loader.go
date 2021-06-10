@@ -3,6 +3,7 @@ package config
 import "time"
 
 // Loader is a object that can import, initialize, and Get config values
+//go:generate go run -mod=mod github.com/golang/mock/mockgen -package loadermock -destination=./loadermock/mock_loader.go -source=../config/loader.go -build_flags=-mod=mod
 type Loader interface {
 	Import(data []byte) error
 	Initialize() error
